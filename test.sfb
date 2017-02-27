@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SpriteFont>
+    <InputSettings fontFamily="Arial" fontStyle="Normal" fontSize="64" characters=" !&quot;#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~"/>
+    <GenerationSettings width="0" height="0" color="#00000000" padding="2" spacing="2"/>
+    <ExportSettings format="Unknown" path="" retinaCopy="0"/>
+    <Effects>
+        <Effect effectType="Fill" effectEnabled="1" effectBlendMode="Normal" effectOpacity="1" fillType="Color" fillColor="#ffff0000" fillGradient="gradientStyle: Linear; angle: 45; scale: 1; stops: (position: 0, color: #ff000000) (position: 1, color: #ffffffff)" fillInset="0"/>
+        <Effect effectType="Shadow" effectEnabled="1" effectBlendMode="Normal" effectOpacity="1" shadowColor="#ff000000" shadowType="Outer" shadowAngle="45" shadowDistance="1" shadowBlur="1" shadowSize="0"/>
+        <Effect effectType="Stroke" effectEnabled="1" effectBlendMode="Normal" effectOpacity="1" strokeWidth="1" strokeColor="#ff000000" strokePosition="Outside"/>
+    </Effects>
+</SpriteFont>
