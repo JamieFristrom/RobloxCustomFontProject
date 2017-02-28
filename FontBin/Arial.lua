@@ -100,6 +100,12 @@ char id=32 x=124 y=277 width=4 height=4 xoffset=1 yoffset=74 xadvance=24 page=0 
 char id=127 x=130 y=277 width=4 height=4 xoffset=1 yoffset=74 xadvance=43 page=0 chnl=0 letter=""
 ]]
 
+-- things that remain
+-- getting lineheight correct
+-- offsetx for at least barely tolerable kerning
+-- figuring out the subtle offset with the lowercase z, etc - baseline is off, I can tell in gimp
+-- abstracting out and testing with two other fonts
+
 -- first, get the chunks of the bmfont file we need into lua tables
 bmfontlua = {}
 
@@ -108,14 +114,22 @@ bmfontlua = {}
 function tableify( str )  
   local t = {}
   -- iterate over patterns of alphanumeric characters=alphanumeric characters, capturing both:
-  for k, v in string.gmatch(str, "(%w+)=(%w+)") do   
-   t[k] = v
+  for k, v in str:gmatch( "(%w+)=(%S+)") do   
+  	t[k] = tonumber(v) or v:match( '[^"]+' )  -- if we can convert to a number, do so, otherwise leave as a string, stripping between the ::
   end
   return t
 end
 
 --matches line with 'info ' up until first control character which should be end-of-line:
 bmfontlua.info = tableify( string.match( bmfont, 'info%s.-%c' ) )  
+
+--because tableify doesn't capture multivalues we need to grab spacing ourselves
+--there's probably a more compact way to do this
+local spacingx
+local spacingy
+spacingx, spacingy = string.match( bmfont, 'spacing=(%w+),(%w+)' )
+bmfontlua.info.spacing = { tonumber(spacingx), tonumber(spacingy) }
+
 bmfontlua.common = tableify( string.match( bmfont, 'common%s.-%c' ) )  
 
 --for sanity checking extract the number of chars from the file
@@ -142,8 +156,5 @@ print( "lineCount "..lineCount )
 	
 -- ok! now the original file is in lua data form, but we still have to convert it to the sort of data that the FontCreator likes
 
-local Arial = {}
-
-
-return Arial
+return bmfontlua
 -- and ignore kernings for now

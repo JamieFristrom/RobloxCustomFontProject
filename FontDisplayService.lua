@@ -88,9 +88,11 @@ function fds:WriteToFrame(fontname, size, text, wraps, frame, wordDetectionEnabl
 	--
 	-- load special cases
 
-	for charname, bounds in next, font.map do
+	for charname, bounds in pairs( font.chars ) do
 		if #charname > 1 then
-			s='bbccabcc' local case='cc' local start,fin = s:find(case) s=s:gsub(s:sub(1, fin), s:sub(1, start-1)..'t')
+			local s='bbccabcc' 
+			local case='cc' 
+			local start, fin = s:find(case) s=s:gsub(s:sub(1, fin), s:sub(1, start-1)..'t')
 			local start, fin = findInString(text, charname)
 
 			while start ~= nil do
@@ -126,48 +128,54 @@ function fds:WriteToFrame(fontname, size, text, wraps, frame, wordDetectionEnabl
 	end
 
 	local addCharacter = function(char)
-		if char == ' ' or char == '\t' then
+		--[[if char == ' ' or char == '\t' then
 			local unitLength = (char == ' ' and 1) or (char == '\t' and 3)
 			local realSize = (font.spaceWidth+font.letterSpacing)*unitLength*sizeMultiplierX
 
 			tryAddCharacter(Vector2.new(realSize, 0))
-		elseif char == '\n' then
-			currentPosition = Vector2.new(0, currentPosition.y + font.letterSpacing*sizeMultiplierX + size + font.lineSpacing*sizeMultiplierX)
+		else --]]
+		if char == '\n' then
+			-- don't get why we're adding letterspacing in there
+			currentPosition = Vector2.new(0, currentPosition.y + font.info.spacing[1]*sizeMultiplierX + size + font.common.lineHeight*sizeMultiplierX)
+--			currentPosition = Vector2.new(0, currentPosition.y + font.letterSpacing*sizeMultiplierX + size + font.lineSpacing*sizeMultiplierX)
 		else
 			local bounds = font.getCharBounds(char)
 			--print(char, #char, char:byte())
-			local sizeMultiplierY = sizeMultiplierX*(1/(bounds[4]/font.baseHeight))
 
-			local relativeSize = Vector2.new(bounds[3]*sizeMultiplierX, bounds[4]*sizeMultiplierY)
+			local sizeMultiplierY = sizeMultiplierX*(1/(bounds.height/font.baseHeight))
 
+			local relativeSize = Vector2.new(bounds.width*sizeMultiplierX, bounds.height*sizeMultiplierX)--sizeMultiplierY)
+
+			-- now that I know how this works, it occurs to me an alternative would be to build imagelabels
+			-- for each character and simply clone them here
 			local visual = Instance.new 'ImageLabel'
 			visual.Name = tostring(#visualCharacters+1)
 			visual.BackgroundTransparency = 1
-			visual.Image = font.source
-			visual.ImageRectOffset = Vector2.new(bounds[1], bounds[2])
-			visual.ImageRectSize = Vector2.new(bounds[3], bounds[4])
+			visual.Image = "rbxgameasset://Images/"..font.info.font  
+			visual.ImageRectOffset = Vector2.new(bounds.x, bounds.y)
+			visual.ImageRectSize = Vector2.new(bounds.width, bounds.height)
 			visual.Position = UDim2.new(0, currentPosition.x, 0, currentPosition.y)
 			visual.Size = UDim2.new(0, relativeSize.x, 0, relativeSize.y)
 			-- visual.Parent = frame
 			visual.ZIndex = frame.ZIndex
 			table.insert(visualCharacters, visual)
 
-			tryAddCharacter(Vector2.new(relativeSize.x + (font.letterSpacing*sizeMultiplierX), 0))
+			tryAddCharacter(Vector2.new(relativeSize.x + (font.info.spacing[1]*sizeMultiplierX), 0))
 
 			--
 			-- do extension
 
-			local ext = font.extensions[char]
+--			local ext = font.extensions[char]
 
-			if ext ~= nil then
-				local top, bottom = unpack(ext)
-				local top, bottom = top or 0, bottom or 0
+			if true then --ext ~= nil then
+				--local top, bottom = unpack(ext)
+				--local top, bottom = top or 0, bottom or 0
 
-				visual.ImageRectOffset = visual.ImageRectOffset + Vector2.new(0, -top)
-				visual.ImageRectSize = visual.ImageRectSize + Vector2.new(0, top+bottom)
+				--visual.ImageRectOffset = visual.ImageRectOffset + Vector2.new(0, -top)
+				--visual.ImageRectSize = visual.ImageRectSize + Vector2.new(0, top+bottom)
 
-				visual.Position = visual.Position + UDim2.new(0, 0, 0, sizeMultiplierY*-top)
-				visual.Size = visual.Size + UDim2.new(0, 0, 0, sizeMultiplierY*(top+bottom))
+				visual.Position = visual.Position + UDim2.new(0, 0, 0, sizeMultiplierX*bounds.yoffset )---top)
+				--visual.Size = visual.Size + UDim2.new(0, 0, 0, sizeMultiplierY*(bounds.height+bounds.yoffset))--top+bottom))
 			end
 		end
 	end
@@ -178,7 +186,7 @@ function fds:WriteToFrame(fontname, size, text, wraps, frame, wordDetectionEnabl
 
 		if wraps == true and wordDetectionEnabled == true and (currentWordPosition + wordSize).x > wrappingBounds.x then
 			if currentWordPosition.x > 0 then
-				currentPosition = Vector2.new(0, currentWordPosition.y + font.letterSpacing*sizeMultiplierX + size + font.lineSpacing*sizeMultiplierX)
+				currentPosition = Vector2.new(0, currentWordPosition.y + font.info.spacing[1]*sizeMultiplierX + size + font.common.lineHeight*sizeMultiplierX)
 			else
 				currentPosition = currentWordPosition
 			end

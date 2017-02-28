@@ -72,10 +72,21 @@ fontCreator.load = function(name)
 	else
 		local f = {}
 		local fout = {}
-		setmetatable(fout, fontMeta)  
-		-- gives us some error catching ability. it's kind of mind-bending: fout is just a metatable that lets us index into 
-		-- the fontObjs class.  
-		fontObjs[fout] = f
+
+		-- gives us some error catching ability. 
+		-- the fontObjs class. But fuck it in the nose because we can't step through it  
+		-- setmetatable(fout, fontMeta)  
+		
+		-- OLD WAY:
+		-- fout was a key that had fontMeta as its metatable which then indexed into the fontObjs
+		-- here when we modify f we are, in effect, modifying fontObjs[fout], so later when we pass fouts around 
+		-- the fout metatable indexes into the fontObjs and provides us with some error protection
+		-- yes, it gives me a nosebleed
+		
+		-- NEW WAY
+		-- loadedFonts[name] contains the font  
+		
+		fontObjs[fout] = f  -- this is obsolete
 
 		local loaderObj = loaderBin:FindFirstChild(name)
 
@@ -83,16 +94,19 @@ fontCreator.load = function(name)
 			error(tostring(name)..' is not a valid font name')
 		end
 
-		local info = require(loaderObj)
-		for i,v in next, info do f[i] = v end
+		local fontTable = require(loaderObj)
+		for i,v in pairs( fontTable ) do
+			f[i] = v 
+		end  -- copy font table. because why - why not just say f = fontTable? Lets us customize size, but we don't seem
+		-- to have the ability to have multiple fonts of different sizes anyway
 
 		--
 		-- find what size to scale the characters to
 
 		local maxCharHeight = 0
 
-		for char, bounds in next, f.map do
-			maxCharHeight = math.max(maxCharHeight, bounds[4])
+		for char, bounds in pairs( f.chars ) do
+			maxCharHeight = math.max(maxCharHeight, bounds.height)
 		end
 
 		f.baseHeight = maxCharHeight
@@ -102,7 +116,7 @@ fontCreator.load = function(name)
 
 		f.specialWordCharacters = {}
 
-		for index, char in next, f.specialWordCharactersList or {} do
+		for index, char in pairs( f.specialWordCharactersList or {} ) do
 			f.specialWordCharacters[char] = true
 		end
 
@@ -110,34 +124,38 @@ fontCreator.load = function(name)
 		-- create utility functions
 
 		function f.transformCharacter(char)
+			return char
+			--[[
 			if f.lowercase == 'none' then
 				return char
 			elseif f.lowercase == 'determinate' then
-				if f.map[char] ~= nil then
+				if f.chars[char] ~= nil then
 					return char
-				elseif f.map[char:upper()] ~= nil then
+				elseif f.chars[char:upper()] ~= nil then
 					return char:upper()
-				elseif f.map[char:lower()] ~= nil then
+				elseif f.chars[char:lower()] ~= nil then
 					return char:lower()
 				end
 
 				return char
 			elseif f.lowercase == 'all' then
 				return char:lower()
-			end
+			end--]]
 		end
 
-		function f.getCharBounds(char)
-			return f.map[f.transformCharacter(char)]
+		function f.getCharBounds(char)  -- actually returns a reference to the whole character because why not
+			return f.chars[f.transformCharacter(char)]
 		end
 
 		function f.getStringSize(str, fontSize)
+			-- fontSize is in pixels
+			-- 
 			local sizemx = fontSize/f.baseHeight
 			local totalSize = Vector2.new(0, 0)
 
-			local specials = {} -- index = bounds
+			local specials = {} -- index = bounds  -- I don't think this is currently used
 
-			for char, bounds in next, f.map do
+			for char, bounds in pairs( f.chars ) do
 				if #char > 1 then
 					local start, fin = findInString(str, char)
 
@@ -153,19 +171,27 @@ fontCreator.load = function(name)
 			end
 
 			for index=1, #str do
+				-- don't believe this is used 
 				local specialBounds, specialExt = unpack(specials[index] or {})
-				local char = str:sub(index, index)
-				local bounds = specialBounds or f.getCharBounds(char) or {0, 0, f.spaceWidth, f.baseHeight}
-
-				local sizemy = sizemx/(1/(bounds[4]/f.baseHeight))
-				local relativeSize = Vector2.new(bounds[3]*sizemx + f.letterSpacing, bounds[4]*sizemy)
 				
-				local ext = (specialBounds and specialExt) or (not specialBounds and f.extensions[char])
+				-- get the indexth character
+				local char = str:sub(index, index)
+				
+				-- transform bounds so it uses special bounds if necessary and is 0,0				
+				local bounds = specialBounds or f.getCharBounds(char) or f.chars[char]
+
+				-- get size multiplier y. It's the height of the character relative to the font height * the relative font size
+				local sizemy = sizemx/(1/(bounds.height/f.baseHeight))
+				local relativeSize = Vector2.new(bounds.width*sizemx + f.info.spacing[1], bounds.height*sizemy)
+				
+--[[				local ext = (specialBounds and specialExt) or (not specialBounds and f.extensions[char])
 				
 				if ext then
 					local relativeExtension = Vector2.new(0, (ext[1]+ext[2])*sizemy)
 					relativeSize = relativeSize + relativeExtension
-				end
+end--]]
+				-- add in the yoffset		
+				relativeSize = relativeSize + Vector2.new( 0, bounds.yoffset * sizemy ) 
 
 				-- totalSize = totalSize+relativeSize
 				
@@ -181,9 +207,9 @@ fontCreator.load = function(name)
 		--
 		--
 
-		loadedFonts[name] = fout
+		loadedFonts[name] = f
 
-		return fout
+		return f
 	end
 end
 
